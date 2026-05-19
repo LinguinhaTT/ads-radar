@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Plan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  plan         Plan      @default(FREE)
+  createdAt    DateTime  @default(now())
+
+  searches     Search[]
+  favorites    Favorite[]
+  monitors     Monitor[]
+}
+
+model Search {
+  id          String   @id @default(cuid())
+  userId      String
+  term        String
+  country     String   @default("BR")
+  minDays     Int      @default(30)
+  resultsJson Json
+  totalFound  Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Favorite {
+  id          String   @id @default(cuid())
+  userId      String
+  adId        String
+  adDataJson  Json
+  collection  String   @default("Geral")
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, adId])
+  @@index([userId])
+}
+
+model Monitor {
+  id          String   @id @default(cuid())
+  userId      String
+  pageId      String
+  pageName    String
+  active      Boolean  @default(true)
+  lastCheck   DateTime?
+  createdAt   DateTime @default(now())
+
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  alerts      MonitorAlert[]
+
+  @@unique([userId, pageId])
+  @@index([userId])
+}
+
+model MonitorAlert {
+  id         String   @id @default(cuid())
+  monitorId  String
+  adId       String
+  adDataJson Json
+  seen       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  monitor    Monitor  @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+
+  @@index([monitorId])
+}
